@@ -1,0 +1,29 @@
+services:
+  dashboard-backend:
+    build: .
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=agencydb
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: agencydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432" # Port 5433 sur ta machine hôte pour éviter un conflit avec l'autre DB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
