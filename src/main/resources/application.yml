@@ -1,5 +1,5 @@
 server:
-  port: ${PORT:8081}
+  port: ${PORT:8080}
 
 springdoc:
   api-docs:
@@ -13,24 +13,43 @@ spring:
     name: AgencyConnectDashboard
 
   r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:agencydb}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:root}
+    url: r2dbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:yowyob}?schema=${DB_SCHEMA:ride_and_go}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     pool:
+      enabled: true
       initial-size: 5
-      max-size: 10
+      max-size: 20
       max-idle-time: 30m
+      validation-query: SELECT 1
 
   # Nouvelle configuration Liquibase (utilise JDBC)
   liquibase:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:yowyob}
+    user: ${DB_LIQUIBASE_USERNAME}
+    password: ${DB_LIQUIBASE_PASSWORD}
     enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master.xml
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:agencydb}
-    user: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:root}
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    default-schema: ${DB_SCHEMA:ride_and_go}
+    liquibase-schema: ${DB_SCHEMA:ride_and_go}
 
 logging:
   level:
     org.springframework.r2dbc: DEBUG
     io.r2dbc.postgresql: DEBUG
     com.example.AgencyConnectDashboard: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ["health", "info", "prometheus"]
+  endpoint:
+    health:
+      show-details: "always"
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
