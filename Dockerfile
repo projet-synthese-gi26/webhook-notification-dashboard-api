@@ -1,21 +1,31 @@
-# ========================================
-# ÉTAPE 1 : BUILD
-# ========================================
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# --- Stage 1: Build ---
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-# On copie le pom ET le code source directement
+# Copie du pom.xml et téléchargement des dépendances (mise en cache des layers)
 COPY pom.xml .
-COPY src ./src
+RUN mvn dependency:go-offline
 
-# On lance le package (le téléchargement des dépendances se fera automatiquement ici)
+# Copie du code source et compilation
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# ========================================
-# ÉTAPE 2 : IMAGE FINALE LÉGÈRE
-# ========================================
-FROM eclipse-temurin:21-jre-alpine
+# --- Stage 2: Run ---
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8081
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+
+# Création d'un utilisateur non-root pour la sécurité (Standard Tramasys)
+RUN addgroup yowyob && adduser yowyob --ingroup yowyob
+USER yowyob:yowyob
+
+# Copie du JAR depuis l'étape de build
+COPY --from=builder /app/target/*.jar app.jar
+
+# Variables d'environnement par défaut
+# Note: Les variables DB_USER, DB_PASSWORD, AUTH_JWT_SECRET doivent être injectées au runtime
+ENV SPRING_PROFILES_ACTIVE=prod
+
+# Exposition du port
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
